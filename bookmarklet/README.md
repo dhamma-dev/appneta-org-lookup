@@ -2,30 +2,25 @@
 
 This directory contains the code for a bookmarklet that provides the same functionality as the Chrome extension, but can be run on any `*.appneta.com` page directly from a browser bookmark.
 
-## `bookmarklet.js`
+## Architecture
 
-This file contains all the necessary HTML, CSS, and JavaScript to create and run the search tool. The code is self-contained and designed to be used to create a bookmarklet.
+To solve the browser's cross-origin security (CORS) restrictions, this bookmarklet uses a loader and iframe-based architecture:
+
+1.  **`bookmarklet_loader.js`**: This is the script that you will use to create the bookmarklet. It creates a hidden `iframe` that loads a page from the `provision.pm.appneta.com` domain.
+2.  **`bookmarklet_core.js`**: This file contains the full application logic (UI, caching, API calls). The loader script embeds the content of this file as a string.
+3.  **Injection**: Once the iframe has loaded (giving it the correct origin), the loader injects the core logic into it. The core logic then runs from within the iframe, but uses `window.parent.document` to create its UI on the main page. This allows the API calls to be same-origin and avoid CORS errors.
 
 ## How to Create the Bookmarklet
 
-Because the script is too large to be placed directly in a bookmark's URL field, you need to use a simple "loader" bookmarklet that fetches and executes the script from a hosted location.
-
-1.  **Host `bookmarklet.js`:**
-    You need to host the `bookmarklet.js` file on a server that is accessible from your browser. This could be a personal web server, a service like GitHub Gist, or a company's internal server. Let's assume you host it at `https://example.com/path/to/bookmarklet.js`.
+1.  **Copy the Loader Code:**
+    Open the `bookmarklet_loader.js` file and copy its entire content.
 
 2.  **Create a New Bookmark:**
-    Create a new bookmark in your browser with the following code in the "URL" or "Location" field:
+    Create a new bookmark in your browser. In the "URL" or "Location" field, paste the code you copied. Make sure the code starts with `javascript:`.
 
-    ```javascript
-    javascript:(function(){
-        var script=document.createElement('script');
-        script.src='https://example.com/path/to/bookmarklet.js';
-        document.body.appendChild(script);
-    })();
-    ```
+    *Note: Some browsers might automatically remove the `javascript:` prefix when you paste the code. You may need to type it in manually at the beginning of the URL field.*
 
-3.  **Update the URL:**
-    Replace `https://example.com/path/to/bookmarklet.js` in the code above with the actual URL where you are hosting the file.
+3.  **Save the bookmark.**
 
 ## How to Use the Bookmarklet
 

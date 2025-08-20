@@ -6,8 +6,7 @@
   const BOOKMARKLET_ID = 'org-lookup-bookmarklet';
 
   // Prevent the bookmarklet from running multiple times
-  if (document.getElementById(BOOKMARKLET_ID)) {
-    alert('Search bookmarklet is already running.');
+  if (window.parent.document.getElementById(BOOKMARKLET_ID)) {
     return;
   }
 
@@ -17,24 +16,9 @@
 
   // --- Main Execution ---
   async function main() {
-    // 1. Prerequisite Checks
-    if (!window.location.hostname.endsWith('.appneta.com')) {
-      alert('This bookmarklet can only be run on an *.appneta.com page.');
-      return;
-    }
     const isAuthenticated = await checkAuthentication();
-
-    // 2. Create the UI
-    createUI();
-
-    // 3. Attach Event Listeners
-    document.getElementById('bl-searchBtn').addEventListener('click', () => performSearch(isAuthenticated));
-    document.getElementById('bl-userSearchBtn').addEventListener('click', () => performUserSearch(isAuthenticated));
-    document.getElementById('bl-loginLink').addEventListener('click', (e) => {
-      e.preventDefault();
-      triggerLogin();
-    });
-    document.getElementById('bl-searchInput').focus();
+    createUI(window.parent.document);
+    attachEventListeners(isAuthenticated);
   }
 
   // --- Prerequisite & Auth Functions ---
@@ -49,8 +33,8 @@
   }
 
   function triggerLogin() {
-    const loginUrl = `${signonUrl}/signon/login.html?redirectUrl=${window.location.href}`;
-    window.open(loginUrl, '_blank');
+    const loginUrl = `${signonUrl}/signon/login.html?redirectUrl=${window.parent.location.href}`;
+    window.parent.open(loginUrl, '_blank');
   }
 
   // --- Caching (localStorage) ---
@@ -130,8 +114,8 @@
 
   // --- Core Logic ---
   async function performSearch(isAuthenticated) {
-    const searchInput = document.getElementById('bl-searchInput').value.trim();
-    if (!searchInput) return alert('Please enter a search value.');
+    const searchInput = window.parent.document.getElementById('bl-searchInput').value.trim();
+    if (!searchInput) return;
 
     if (isAuthenticated) {
       const searchPromises = [
@@ -154,7 +138,7 @@
       const { orgs } = searchCache(searchInput);
       if (orgs.length > 0) {
         displayResults(orgs);
-        document.getElementById('bl-cacheMessageContainer').style.display = 'block';
+        window.parent.document.getElementById('bl-cacheMessageContainer').style.display = 'block';
       } else {
         alert('No cached results found. Please log in to AppNeta to perform a live search.');
       }
@@ -162,8 +146,8 @@
   }
 
   async function performUserSearch(isAuthenticated) {
-    const searchInput = document.getElementById('bl-userSearchInput').value.trim();
-    if (!searchInput) return alert('Please enter a user search value.');
+    const searchInput = window.parent.document.getElementById('bl-userSearchInput').value.trim();
+    if (!searchInput) return;
 
     if (isAuthenticated) {
       fetchUsers(searchInput).then(async (users) => {
@@ -174,7 +158,7 @@
       const { users } = searchCache(searchInput);
       if (users.length > 0) {
         displayUserResults(users);
-        document.getElementById('bl-cacheMessageContainer').style.display = 'block';
+        window.parent.document.getElementById('bl-cacheMessageContainer').style.display = 'block';
       } else {
         alert('No cached results found. Please log in to AppNeta to perform a live search.');
       }
@@ -183,13 +167,13 @@
 
   // --- UI Rendering ---
   function displayError(message) {
-    const errorContainer = document.getElementById('bl-errorContainer');
+    const errorContainer = window.parent.document.getElementById('bl-errorContainer');
     errorContainer.textContent = message;
     errorContainer.style.display = 'block';
   }
 
   function displayResults(organizations) {
-    const resultsBody = document.getElementById('bl-resultsBody');
+    const resultsBody = window.parent.document.getElementById('bl-resultsBody');
     resultsBody.innerHTML = '';
     organizations.forEach(org => {
       const row = resultsBody.insertRow();
@@ -199,14 +183,14 @@
         <td>${org.erpAccountId || ''}</td><td>${org.supportSiteId || ''}</td>
       `;
     });
-    document.getElementById('bl-resultsTable').style.display = 'table';
+    window.parent.document.getElementById('bl-resultsTable').style.display = 'table';
   }
 
   function displayUserResults(users) {
-    const container = document.getElementById('bl-userResultsContainer');
+    const container = window.parent.document.getElementById('bl-userResultsContainer');
     container.innerHTML = '';
     users.forEach(user => {
-      const userDetails = document.createElement('div');
+      const userDetails = window.parent.document.createElement('div');
       userDetails.className = 'bl-user-details';
       const roles = JSON.parse(user.pvUserSetting.roles).join(', ');
       let orgsHtml = '<ul>';
@@ -230,10 +214,9 @@
     container.style.display = 'block';
   }
 
-  function createUI() {
-    const container = document.createElement('div');
+  function createUI(doc) {
+    const container = doc.createElement('div');
     container.id = BOOKMARKLET_ID;
-
     const css = `
       #${BOOKMARKLET_ID} {
         position: fixed; top: 20px; right: 20px; width: 680px; max-height: 90vh; overflow-y: auto;
@@ -289,18 +272,29 @@
       </div>
     `;
 
-    const styleElement = document.createElement('style');
+    const styleElement = doc.createElement('style');
     styleElement.id = `${BOOKMARKLET_ID}-styles`;
     styleElement.textContent = css.replace(/\s\s+/g, ' ');
-    document.head.appendChild(styleElement);
+    doc.head.appendChild(styleElement);
 
     container.innerHTML = html;
-    document.body.appendChild(container);
+    doc.body.appendChild(container);
 
-    document.getElementById('bl-close-btn').addEventListener('click', () => {
+    doc.getElementById('bl-close-btn').addEventListener('click', () => {
       container.remove();
       styleElement.remove();
     });
+  }
+
+  function attachEventListeners(isAuthenticated) {
+    const doc = window.parent.document;
+    doc.getElementById('bl-searchBtn').addEventListener('click', () => performSearch(isAuthenticated));
+    doc.getElementById('bl-userSearchBtn').addEventListener('click', () => performUserSearch(isAuthenticated));
+    doc.getElementById('bl-loginLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      triggerLogin();
+    });
+    doc.getElementById('bl-searchInput').focus();
   }
 
   main();
