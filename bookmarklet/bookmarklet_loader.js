@@ -216,7 +216,7 @@ javascript:(function() {
   };
 
   // Set the src to start loading the iframe from the correct origin
-  iframe.src = 'https://provision.pm.appneta.com/';
+  iframe.src = 'https://provision.pm.appneta.com/api/v1/swagger-html';
   document.body.appendChild(iframe);
 
 })();
